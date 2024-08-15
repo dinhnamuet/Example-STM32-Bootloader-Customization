@@ -1,0 +1,6 @@
+../Core/Src/foo.c:20:12:erase_page	40	static
+../Core/Src/foo.c:37:19:get_page_by_address	16	static
+../Core/Src/foo.c:41:26:flash_write_data	2096	static
+../Core/Src/foo.c:67:26:update_firmware	2120	static
+../Core/Src/foo.c:91:13:responses	64	dynamic
+../Core/Src/foo.c:103:9:handle_request	72	static

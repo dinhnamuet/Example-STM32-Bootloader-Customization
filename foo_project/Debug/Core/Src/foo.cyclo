@@ -1,0 +1,5 @@
+../Core/Src/foo.c:21:13:set_pwm_led	1
+../Core/Src/foo.c:26:5:set_serial_number	2
+../Core/Src/foo.c:43:6:get_serial_number	3
+../Core/Src/foo.c:61:13:responses	1
+../Core/Src/foo.c:74:9:handle_request	24

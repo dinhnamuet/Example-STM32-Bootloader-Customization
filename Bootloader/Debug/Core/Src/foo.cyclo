@@ -1,0 +1,6 @@
+../Core/Src/foo.c:20:12:erase_page	2
+../Core/Src/foo.c:37:19:get_page_by_address	1
+../Core/Src/foo.c:41:26:flash_write_data	5
+../Core/Src/foo.c:67:26:update_firmware	3
+../Core/Src/foo.c:91:13:responses	1
+../Core/Src/foo.c:103:9:handle_request	5
