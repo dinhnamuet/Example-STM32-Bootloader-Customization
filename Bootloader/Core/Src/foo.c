@@ -7,6 +7,7 @@
 #include "foo.h"
 #include <string.h>
 #include <stdlib.h>
+#include "flash.h"
 
 #define START_IDX 0
 #define PRVER_IDX 1
@@ -14,82 +15,10 @@
 #define MTYPE_IDX 3
 #define START_DATA_IDX 12
 
-static inline u32 get_page_base_address(u32 page) {
-	return FLASH_BASE + (PAGESIZE * page);
-}
-static int erase_page(u32 base_page, u32 number) {
-	FLASH_EraseInitTypeDef erase;
-	u32 page_err;
-
-	erase.Banks = FLASH_BANK_1;
-	erase.Page = base_page;
-	erase.NbPages = number;
-	erase.TypeErase = FLASH_TYPEERASE_PAGES;
-
-	HAL_FLASH_Unlock();
-	if (HAL_FLASHEx_Erase(&erase, &page_err) != HAL_OK) {
-		HAL_FLASH_Lock();
-		return -1;
-	}
-	HAL_FLASH_Lock();
-	return page_err;
-}
-static inline u32 get_page_by_address(u32 address) {
-	return (u32) (address - FLASH_BASE) / PAGESIZE;
-}
-
-static HAL_StatusTypeDef flash_write_data(u32 base_address, u32 offset,
-		u8 *data, u8 length) {
-	u32 i, page_idx;
-	HAL_StatusTypeDef res;
-	u8 page_data[PAGESIZE];
-	u64 *ptr = (u64 *)&page_data[0];
-	memset(page_data, 0, PAGESIZE);
-	for (i = 0; i < PAGESIZE / 8; i++)
-		ptr[i] = *(volatile u64*) (base_address + (8 * i));
-	memcpy(&page_data[offset], data, length);
-	page_idx = get_page_by_address(base_address);
-	res = erase_page(page_idx, 1);
-	if (res != HAL_OK)
-		return res;
-	HAL_FLASH_Unlock();
-	for (i = 0; i < PAGESIZE / 8; i++) {
-		res = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, base_address + (8*i), ptr[i]);
-		if (res != HAL_OK) {
-			HAL_FLASH_Lock();
-			return res;
-		}
-	}
-	HAL_FLASH_Lock();
-	return res;
-}
-
 static HAL_StatusTypeDef update_firmware(u32 address, const u8 *data, u32 len) {
-	u64 i, to_write;
-	u64 *ptr;
-	u8 program[2048];
-	u32 page_idx;
-	HAL_StatusTypeDef res;
-	to_write = (u64) (len + 7) / 8;
-	page_idx = get_page_by_address(address);
-	erase_page(page_idx, 1);
-	memset(program, 0, sizeof(program));
-	memcpy(program, data, len);
-	ptr = (u64*) &program[0];
-	HAL_FLASH_Unlock();
-	for (i = 0; i < to_write; i++) {
-		res = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, address + 8 * i,
-				ptr[i]);
-		if (res != HAL_OK) {
-			HAL_FLASH_Lock();
-			return res;
-		}
-	}
-	HAL_FLASH_Lock();
-	return HAL_OK;
+	return flash_write_data(address, (u8 *)data, len);
 }
-static void responses(struct foo_device *dev, u16 *start_frame, u8 *data,
-		u32 len, u16 end) {
+static void responses(struct foo_device *dev, u16 *start_frame, u8 *data, u32 len, u16 end) {
 	u16 size = 4 * sizeof(u16) + sizeof(u32) + len + sizeof(u16);
 	u8 buff[size];
 	memset(buff, 0, size);
@@ -131,7 +60,7 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 		len = 1;
 		if (!length) {
 			flag = ON_BOOTING_APP;
-			flash_write_data(VAR_BASE_ADDRESS, FLAG_OFFSET, (u8 *) &flag, sizeof(u64));
+			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, (u8 *) &flag, sizeof(u64));
 			res = 1;
 			responses(dev, start_frame, &res, len, end);
 			HAL_NVIC_SystemReset();

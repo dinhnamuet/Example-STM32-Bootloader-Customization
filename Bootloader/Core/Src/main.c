@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include "foo.h"
 #include "wdt.h"
+#include "flash.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,7 +51,6 @@ IWDG_HandleTypeDef hiwdg;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-static const u32 START_ADDRESS = FIRMWARE_ADDRESS;
 static u8 frame[FRAME_MAX_SIZE];
 static struct foo_device dev;
 status_t flag = NO_RQ;
@@ -283,7 +283,9 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 static inline u64 get_flag(void) {
-	return *(__IO u64*) (VAR_BASE_ADDRESS + FLAG_OFFSET);
+	u64 flag;
+	flash_read(VAR_BASE_ADDRESS + FLAG_OFFSET, &flag, sizeof(u64));
+	return flag;
 }
 
 static inline void goto_application(void) {
@@ -291,9 +293,8 @@ static inline void goto_application(void) {
 	HAL_DeInit(); //clear pending interrupt request, turn off System Tick
 	SCB->SHCSR &= ~(SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk
 			| SCB_SHCSR_MEMFAULTENA_Msk);
-	__set_MSP(*((volatile uint32_t*) START_ADDRESS));
-	uint32_t JumpAddress = *((volatile uint32_t*) (START_ADDRESS + 4));
-	void (*reset_handler)(void) = (void*)JumpAddress;
+	__set_MSP(*((volatile uint32_t*) FIRMWARE_ADDRESS));
+	void (*reset_handler)(void) = (void*)(*((volatile uint32_t*) (FIRMWARE_ADDRESS + 4U)));
 	reset_handler();
 }
 

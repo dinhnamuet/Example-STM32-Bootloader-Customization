@@ -34,20 +34,15 @@ int set_serial_number(struct foo_device *dev, const u8 *ser_num, u8 len) {
 	memcpy(buf, &dev->serial_number.len, 4);
 	memcpy(&buf[4], dev->serial_number.number, 20);
 
-	if (flash_write_data(VAR_BASE_ADDRESS, 0, buf, SERIAL_NUMBER_MAX_LENGTH)
-			!= HAL_OK)
+	if (flash_write_data(VAR_BASE_ADDRESS, buf, SERIAL_NUMBER_MAX_LENGTH)!= HAL_OK)
 		return -1;
 	return 0;
 }
 
 void get_serial_number(struct foo_device *dev) {
-	int i;
-	u64 bar[3];
-	u8 *foo;
-	for (i = 0; i < 3; i++)
-		bar[i] = *(volatile u64*) (VAR_BASE_ADDRESS + SERIAL_NUMBER_OFFSET
-				+ (8 * i));
-	foo = (u8*) bar;
+	u8 foo[24] = {};
+	memset(&dev->serial_number, 0, sizeof(dev->serial_number));
+	flash_read(VAR_BASE_ADDRESS + SERIAL_NUMBER_OFFSET, foo, 24);
 	memcpy(&dev->serial_number.len, foo, 4);
 	if (dev->serial_number.len > 20) {
 		memcpy(dev->serial_number.number, (u8*) "ABCDE", 5);
@@ -142,8 +137,7 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 		start_frame[MTYPE_IDX] = SET_PREP_MODE;
 		len = 0;
 		if (buf[0] == 1 && buf[1] == 5) {
-			flash_write_data(VAR_BASE_ADDRESS, FLAG_OFFSET, (u8*) &flag,
-					sizeof(u64));
+			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, (u8*) &flag, sizeof(u64));
 			responses(dev, start_frame, NULL, len, end);
 			HAL_NVIC_SystemReset();
 		}

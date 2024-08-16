@@ -99,9 +99,8 @@ int main(void)
 	dev.watting_time_off = WAIT_TOFF;
 	dev.max_led_current = 1000;
 	dev.led_current = 0;
-
-	get_serial_number(&dev);
 	memset(frame, 0, sizeof(frame));
+	get_serial_number(&dev);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -149,8 +148,8 @@ int main(void)
 			HAL_UARTEx_ReceiveToIdle_IT(&huart1, frame, sizeof(frame));
 		}
 		ping_to_watchdog(&hiwdg);
-//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//		HAL_Delay(500);
+		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		HAL_Delay(500);
 	}
   /* USER CODE END 3 */
 }

@@ -9,7 +9,7 @@
 #define INC_FOO_H_
 #include "stm32l4xx_hal.h"
 
-#define FIRMWARE_ADDRESS 			0x0800A000
+#define FIRMWARE_ADDRESS 			0x0800A000U
 #define FIRMWARE_PAGE				(FIRMWARE_ADDRESS - FLASH_BASE)/PAGESIZE
 #define PROT_VER					0x1000
 

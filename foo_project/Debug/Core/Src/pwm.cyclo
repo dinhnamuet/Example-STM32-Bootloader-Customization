@@ -1,3 +1,0 @@
-../Core/Src/pwm.c:10:19:pwm_init	9
-../Core/Src/pwm.c:44:6:pwm_set_dutycycle	2
-../Core/Src/pwm.c:54:19:pwm_set_frequency	8

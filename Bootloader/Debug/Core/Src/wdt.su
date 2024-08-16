@@ -1,2 +1,0 @@
-../Core/Src/wdt.c:9:19:watchdog_set_timeout	16	static
-../Core/Src/wdt.c:41:19:ping_to_watchdog	16	static
