@@ -148,8 +148,8 @@ int main(void)
 			HAL_UARTEx_ReceiveToIdle_IT(&huart1, frame, sizeof(frame));
 		}
 		ping_to_watchdog(&hiwdg);
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		HAL_Delay(500);
+//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+//		HAL_Delay(500);
 	}
   /* USER CODE END 3 */
 }

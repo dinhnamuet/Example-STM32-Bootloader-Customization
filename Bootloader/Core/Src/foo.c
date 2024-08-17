@@ -15,8 +15,34 @@
 #define MTYPE_IDX 3
 #define START_DATA_IDX 12
 
-static HAL_StatusTypeDef update_firmware(u32 address, const u8 *data, u32 len) {
-	return flash_write_data(address, (u8 *)data, len);
+/*
+ * @bief Write Firmware data to Flash memory and verify
+ * @param address: Flash memory address
+ * @param data: data to write
+ * @param len: data length
+ * @retval Status
+ */
+static HAL_StatusTypeDef flash_write_firmware(u32 address, const u8 *data, u32 len) {
+	u8 *verify = NULL;
+
+	HAL_StatusTypeDef  res = flash_write_data(address, (u8 *)data, len); /* Write Firmware data */
+	if (res != HAL_OK) {
+		return res;
+	}
+
+	verify = (u8 *)calloc(len, sizeof(u8));
+	if (!verify) {
+		return HAL_ERROR;
+	}
+
+	flash_read(address, verify, len);
+	if (memcmp(data, verify, len)) { /* Verify data in Flash memory */
+		free(verify);
+		return HAL_ERROR; /* Data miss match */
+	} else {
+		free(verify);
+		return HAL_OK; /* Data ok */
+	}
 }
 static void responses(struct foo_device *dev, u16 *start_frame, u8 *data, u32 len, u16 end) {
 	u16 size = 4 * sizeof(u16) + sizeof(u32) + len + sizeof(u16);
@@ -64,7 +90,7 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 			res = 1;
 			responses(dev, start_frame, &res, len, end);
 			HAL_NVIC_SystemReset();
-		} else if (update_firmware(dev->firmware_address, &frame[START_DATA_IDX],
+		} else if (flash_write_firmware(dev->firmware_address, &frame[START_DATA_IDX],
 				length) != HAL_OK) {
 			res = 0;
 		} else {
