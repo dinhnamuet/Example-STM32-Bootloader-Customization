@@ -62,7 +62,7 @@ static void responses(struct foo_device *dev, u16 *start_frame, u8 *data,
 	memcpy(&buff[8], &len, sizeof(u32));
 	memcpy(&buff[12], data, len);
 	memcpy(&buff[size - 2], &end, sizeof(end));
-	HAL_UART_Transmit(dev->bus, buff, size, 100);
+	serial_send(&dev->serial, buff, size);
 }
 
 //FAFB 1000 0000 2100 08000000 2122232425262728 FCFD

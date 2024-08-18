@@ -26,18 +26,17 @@
 #include "foo.h"
 #include "wdt.h"
 #include "flash.h"
+#include "task_list.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef enum {
-	NO_RQ, PENDING_RQ
-} status_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define FRAME_MAX_SIZE 2062
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,9 +50,8 @@ IWDG_HandleTypeDef hiwdg;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-static u8 frame[FRAME_MAX_SIZE];
 static struct foo_device dev;
-status_t flag = NO_RQ;
+static struct task_queue  serial_queue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,10 +67,10 @@ static inline void goto_application(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-	if (huart->Instance == USART1) {
-		flag = PENDING_RQ;
-	}
+void uart_receive(struct serdev_device *dev, u8 *buf, u32 len) {
+	struct task_struct *task = (struct task_struct *)buf;
+	put_task_to_queue(&serial_queue, *task);
+	serial_start_receiving(dev);
 }
 
 /* USER CODE END 0 */
@@ -84,10 +82,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	dev.bus = &huart1;
+	init_queue(&serial_queue, 5);
+	dev.serial.bus = &huart1;
+	dev.serial.receive_buf = uart_receive;
 	dev.protocol_version = PROT_VER;
 	dev.firmware_address = FIRMWARE_ADDRESS;
-	memset(frame, 0, sizeof(frame));
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -111,11 +110,12 @@ int main(void)
   MX_USART1_UART_Init();
   MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
+  serdev_device_register(&dev.serial);
 	watchdog_set_timeout(&hiwdg, TIMEOUT_32_SEC);
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
 	if (get_flag() == ON_UPDATE_FIRMWARE)
-		HAL_UARTEx_ReceiveToIdle_IT(&huart1, frame, sizeof(frame));
+		serial_start_receiving(&dev.serial);
 	else
 		goto_application();
 
@@ -127,11 +127,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if (flag == PENDING_RQ) {
-			handle_request(&dev, frame);
-			flag = NO_RQ;
-			memset(frame, 0, sizeof(frame));
-			HAL_UARTEx_ReceiveToIdle_IT(&huart1, frame, sizeof(frame));
+		if (!queue_is_empty(&serial_queue)) {
+			handle_request(&dev, get_new_task(&serial_queue).buf);
 		}
 		ping_to_watchdog(&hiwdg);
 	}

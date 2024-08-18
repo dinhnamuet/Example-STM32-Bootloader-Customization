@@ -8,6 +8,7 @@
 #ifndef INC_FOO_H_
 #define INC_FOO_H_
 #include "stm32l4xx_hal.h"
+#include "serial.h"
 
 #define FIRMWARE_ADDRESS 			0x0800A000U
 #define FIRMWARE_PAGE				(FIRMWARE_ADDRESS - FLASH_BASE)/PAGESIZE
@@ -30,7 +31,8 @@ typedef uint64_t u64;
 
 #pragma pack(1)
 struct foo_device {
-	UART_HandleTypeDef *bus;
+	struct serdev_device serial;
+
 	u16 protocol_version;
 	u32 firmware_address;
 };

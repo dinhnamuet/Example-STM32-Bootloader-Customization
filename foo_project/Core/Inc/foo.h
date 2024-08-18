@@ -8,7 +8,7 @@
 #define INC_FOO_H_
 #include "stm32l4xx_hal.h"
 #include "pwm.h"
-
+#include "serial.h"
 #define VAR_BASE_ADDRESS			(FLASH_BASE + 127*PAGESIZE)
 
 #define SERIAL_NUMBER_MAX_LENGTH	24
@@ -32,7 +32,7 @@ struct ser_num {
 
 #pragma pack(1)
 struct foo_device {
-	UART_HandleTypeDef *bus;
+	struct serdev_device serial;
 
 	u16 hardware_version;
 	u16 firmware_version;

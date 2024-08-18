@@ -25,13 +25,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include "wdt.h"
+#include "serial.h"
+#include "task_list.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef enum {
-	NO_RQ, PENDING_RQ,
-} status_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -57,8 +57,7 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 static struct foo_device dev;
-static u8 frame[FRAME_MAX_SIZE];
-static status_t flag = NO_RQ;
+static struct task_queue serial_queue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -74,10 +73,10 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-	if (huart->Instance == USART1) {
-		flag = PENDING_RQ;
-	}
+void uart_receive(struct serdev_device *dev, u8 *buf, u32 len) {
+	struct task_struct *task = (struct task_struct *)buf;
+	put_task_to_queue(&serial_queue, *task);
+	serial_start_receiving(dev);
 }
 
 /* USER CODE END 0 */
@@ -91,7 +90,8 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 	SystemInit();
-	dev.bus = &huart1;
+	dev.serial.bus = &huart1;
+	dev.serial.receive_buf = uart_receive;
 	dev.button_trigger = 1;
 	dev.firmware_version = FW_VERSION;
 	dev.hardware_version = HW_VERSION;
@@ -99,7 +99,6 @@ int main(void)
 	dev.watting_time_off = WAIT_TOFF;
 	dev.max_led_current = 1000;
 	dev.led_current = 0;
-	memset(frame, 0, sizeof(frame));
 	get_serial_number(&dev);
   /* USER CODE END 1 */
 
@@ -125,10 +124,12 @@ int main(void)
   MX_IWDG_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  init_queue(&serial_queue, 5);
+  serdev_device_register(&dev.serial);
+  serial_start_receiving(&dev.serial);
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 	watchdog_set_timeout(&hiwdg, TIMEOUT_16_SEC);
 	pwm_init(&dev.led, &htim2, TIM_CHANNEL_1);
-	HAL_UARTEx_ReceiveToIdle_IT(&huart1, frame, sizeof(frame));
 
 	pwm_set_frequency(&dev.led, 2000);
 //	pwm_set_dutycycle(&dev.led, 1.24);
@@ -141,11 +142,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if (flag == PENDING_RQ) {
-			handle_request(&dev, frame);
-			flag = NO_RQ;
-			memset(frame, 0, sizeof(frame));
-			HAL_UARTEx_ReceiveToIdle_IT(&huart1, frame, sizeof(frame));
+		if (!queue_is_empty(&serial_queue)) {
+			handle_request(&dev, get_new_task(&serial_queue).buf);
 		}
 		ping_to_watchdog(&hiwdg);
 //		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
