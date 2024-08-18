@@ -1,3 +1,4 @@
+"./Core/Src/bootloader.o"
 "./Core/Src/flash.o"
 "./Core/Src/foo.o"
 "./Core/Src/main.o"

@@ -27,6 +27,7 @@
 #include "wdt.h"
 #include "flash.h"
 #include "task_list.h"
+#include "bootloader.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +37,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define HW_VERSION 	0x7d2
+#define FW_VERSION 	0x12
+#define PROT_VER	0x1000
+#define WAIT_TOFF	(0x3E8 * 600)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,8 +64,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
-static inline u64 get_flag(void);
-static inline void goto_application(void);
+static boot_options_t get_flag(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -85,8 +88,18 @@ int main(void)
 	init_queue(&serial_queue, 5);
 	dev.serial.bus = &huart1;
 	dev.serial.receive_buf = uart_receive;
+	dev.button_trigger = 1;
+	dev.firmware_version = FW_VERSION;
+	dev.hardware_version = HW_VERSION;
 	dev.protocol_version = PROT_VER;
+	dev.watting_time_off = WAIT_TOFF;
+	get_serial_number(&dev);
+
+#ifdef FLASH_LARGE
+  dev.firmware_address = FIRMWARE_TEM; 
+#else
 	dev.firmware_address = FIRMWARE_ADDRESS;
+#endif
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -114,10 +127,24 @@ int main(void)
 	watchdog_set_timeout(&hiwdg, TIMEOUT_32_SEC);
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-	if (get_flag() == ON_UPDATE_FIRMWARE)
-		serial_start_receiving(&dev.serial);
-	else
-		goto_application();
+	boot_options_t flag_r = get_flag();
+	switch (flag_r) {
+		case UPDATE_MODE:
+			u32 size = 0;
+			flash_read(VAR_BASE_ADDRESS + FW_LENGTH_OFFSET, &size, sizeof(u32));
+			update_firmware(size);
+			boot_options_t flag = BOOTING_MODE;
+			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, (u8 *)&flag, sizeof(boot_options_t));
+			HAL_NVIC_SystemReset();
+			break;
+
+		case BOOTLOADER_MODE:
+			serial_start_receiving(&dev.serial);
+			break;
+
+		default:
+			goto_application();
+	}
 
   /* USER CODE END 2 */
 
@@ -279,20 +306,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-static inline u64 get_flag(void) {
-	u64 flag;
-	flash_read(VAR_BASE_ADDRESS + FLAG_OFFSET, &flag, sizeof(u64));
+static boot_options_t get_flag(void) {
+	boot_options_t flag = BOOTING_MODE;
+	flash_read(VAR_BASE_ADDRESS + FLAG_OFFSET, &flag, sizeof(boot_options_t));
 	return flag;
-}
-
-static inline void goto_application(void) {
-	HAL_RCC_DeInit(); //turn off peripherals, clear interrupt flags
-	HAL_DeInit(); //clear pending interrupt request, turn off System Tick
-	SCB->SHCSR &= ~(SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk
-			| SCB_SHCSR_MEMFAULTENA_Msk);
-	__set_MSP(*((volatile uint32_t*) FIRMWARE_ADDRESS));
-	void (*reset_handler)(void) = (void*)(*((volatile uint32_t*) (FIRMWARE_ADDRESS + 4U)));
-	reset_handler();
 }
 
 /* USER CODE END 4 */

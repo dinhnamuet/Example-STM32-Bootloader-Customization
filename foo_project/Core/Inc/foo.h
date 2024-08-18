@@ -17,13 +17,16 @@
 #define FLAG_MAX_LENGTH				8
 #define FLAG_OFFSET					(SERIAL_NUMBER_OFFSET + SERIAL_NUMBER_MAX_LENGTH)
 
-#define ON_UPDATE_FIRMWARE		0x12UL
-#define ON_BOOTING_APP			0x00UL
-
 typedef uint16_t u16;
 typedef uint8_t u8;
 typedef uint32_t u32;
 typedef uint64_t u64;
+
+typedef enum {
+    BOOTING_MODE,
+    UPDATE_MODE = 0x02,
+    BOOTLOADER_MODE = 0x08
+} boot_options_t;
 
 struct ser_num {
 	u8 number[20];

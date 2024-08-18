@@ -10,24 +10,26 @@
 #include "stm32l4xx_hal.h"
 #include "serial.h"
 
-#define FIRMWARE_ADDRESS 			0x0800A000U
-#define FIRMWARE_PAGE				(FIRMWARE_ADDRESS - FLASH_BASE)/PAGESIZE
-#define PROT_VER					0x1000
-
 #define VAR_BASE_ADDRESS			(FLASH_BASE + 127*PAGESIZE)
 
 #define SERIAL_NUMBER_MAX_LENGTH	24
 #define SERIAL_NUMBER_OFFSET 		0
+
 #define FLAG_MAX_LENGTH				8
 #define FLAG_OFFSET					(SERIAL_NUMBER_OFFSET + SERIAL_NUMBER_MAX_LENGTH)
 
-#define ON_UPDATE_FIRMWARE			0x12UL
-#define ON_BOOTING_APP				0x00UL
+#define FW_LENGTH_MAX_LEN		4
+#define FW_LENGTH_OFFSET			(FLAG_OFFSET + FLAG_MAX_LENGTH)
 
 typedef uint16_t u16;
 typedef uint8_t u8;
 typedef uint32_t u32;
 typedef uint64_t u64;
+
+struct ser_num {
+	u8 number[20];
+	u32 len;
+};
 
 #pragma pack(1)
 struct foo_device {
@@ -35,6 +37,13 @@ struct foo_device {
 
 	u16 protocol_version;
 	u32 firmware_address;
+
+	u16 hardware_version;
+	u16 firmware_version;
+
+	u8 button_trigger;
+	u32 watting_time_off;
+	struct ser_num serial_number;
 };
 #pragma pack()
 
@@ -163,7 +172,6 @@ typedef enum {
 	GET_DARK_RATIO=0x0B05, //Get dark raito
 } msg_t;
 
-int set_serial_number(struct foo_device *dev, const u8 *ser_num, u8 len);
 void get_serial_number(struct foo_device *dev);
 error_t handle_request(struct foo_device *dev, const u8 *frame);
 

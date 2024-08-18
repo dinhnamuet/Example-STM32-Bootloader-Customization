@@ -5,6 +5,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/bootloader.c \
 ../Core/Src/flash.c \
 ../Core/Src/foo.c \
 ../Core/Src/main.c \
@@ -18,6 +19,7 @@ C_SRCS += \
 ../Core/Src/wdt.c 
 
 OBJS += \
+./Core/Src/bootloader.o \
 ./Core/Src/flash.o \
 ./Core/Src/foo.o \
 ./Core/Src/main.o \
@@ -31,6 +33,7 @@ OBJS += \
 ./Core/Src/wdt.o 
 
 C_DEPS += \
+./Core/Src/bootloader.d \
 ./Core/Src/flash.d \
 ./Core/Src/foo.d \
 ./Core/Src/main.d \
@@ -51,7 +54,7 @@ Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/flash.cyclo ./Core/Src/flash.d ./Core/Src/flash.o ./Core/Src/flash.su ./Core/Src/foo.cyclo ./Core/Src/foo.d ./Core/Src/foo.o ./Core/Src/foo.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/serial.cyclo ./Core/Src/serial.d ./Core/Src/serial.o ./Core/Src/serial.su ./Core/Src/stm32l4xx_hal_msp.cyclo ./Core/Src/stm32l4xx_hal_msp.d ./Core/Src/stm32l4xx_hal_msp.o ./Core/Src/stm32l4xx_hal_msp.su ./Core/Src/stm32l4xx_it.cyclo ./Core/Src/stm32l4xx_it.d ./Core/Src/stm32l4xx_it.o ./Core/Src/stm32l4xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32l4xx.cyclo ./Core/Src/system_stm32l4xx.d ./Core/Src/system_stm32l4xx.o ./Core/Src/system_stm32l4xx.su ./Core/Src/task_list.cyclo ./Core/Src/task_list.d ./Core/Src/task_list.o ./Core/Src/task_list.su ./Core/Src/wdt.cyclo ./Core/Src/wdt.d ./Core/Src/wdt.o ./Core/Src/wdt.su
+	-$(RM) ./Core/Src/bootloader.cyclo ./Core/Src/bootloader.d ./Core/Src/bootloader.o ./Core/Src/bootloader.su ./Core/Src/flash.cyclo ./Core/Src/flash.d ./Core/Src/flash.o ./Core/Src/flash.su ./Core/Src/foo.cyclo ./Core/Src/foo.d ./Core/Src/foo.o ./Core/Src/foo.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/serial.cyclo ./Core/Src/serial.d ./Core/Src/serial.o ./Core/Src/serial.su ./Core/Src/stm32l4xx_hal_msp.cyclo ./Core/Src/stm32l4xx_hal_msp.d ./Core/Src/stm32l4xx_hal_msp.o ./Core/Src/stm32l4xx_hal_msp.su ./Core/Src/stm32l4xx_it.cyclo ./Core/Src/stm32l4xx_it.d ./Core/Src/stm32l4xx_it.o ./Core/Src/stm32l4xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32l4xx.cyclo ./Core/Src/system_stm32l4xx.d ./Core/Src/system_stm32l4xx.o ./Core/Src/system_stm32l4xx.su ./Core/Src/task_list.cyclo ./Core/Src/task_list.d ./Core/Src/task_list.o ./Core/Src/task_list.su ./Core/Src/wdt.cyclo ./Core/Src/wdt.d ./Core/Src/wdt.o ./Core/Src/wdt.su
 
 .PHONY: clean-Core-2f-Src
 

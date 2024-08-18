@@ -8,12 +8,27 @@
 #include <string.h>
 #include <stdlib.h>
 #include "flash.h"
+#include "bootloader.h"
 
 #define START_IDX 0
 #define PRVER_IDX 1
 #define ERRNO_IDX 2
 #define MTYPE_IDX 3
 #define START_DATA_IDX 12
+
+void get_serial_number(struct foo_device *dev) {
+	u8 foo[24] = {};
+	memset(&dev->serial_number, 0, sizeof(dev->serial_number));
+	flash_read(VAR_BASE_ADDRESS + SERIAL_NUMBER_OFFSET, foo, 24);
+	memcpy(&dev->serial_number.len, foo, 4);
+	if (dev->serial_number.len > 20) {
+		memcpy(dev->serial_number.number, (u8*) "ABCDE", 5);
+		dev->serial_number.len = 5;
+		return;
+	} else {
+		memcpy(dev->serial_number.number, &foo[4], 20);
+	}
+}
 
 /*
  * @bief Write Firmware data to Flash memory and verify
@@ -80,21 +95,81 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 		start_frame[ERRNO_IDX] = OKAY;
 
 	switch (msgtype) {
+	case GET_HW_VERSION:
+			start_frame[MTYPE_IDX] = GET_HW_VERSION;
+			len = 2;
+			data_ptr = (u8*) &dev->hardware_version;
+			break;
+
+	case GET_FW_VERSION:
+			start_frame[MTYPE_IDX] = GET_FW_VERSION;
+			len = 2;
+			data_ptr = (u8*) &dev->firmware_version;
+			break;
+
+	case GET_SER_NO:
+			start_frame[MTYPE_IDX] = GET_SER_NO;
+			get_serial_number(dev);
+			len = dev->serial_number.len;
+			data_ptr = &dev->serial_number.number[0];
+			break;
+
+	case GET_TRIGGER_BE:
+			start_frame[MTYPE_IDX] = GET_TRIGGER_BE;
+			len = 1;
+			data_ptr = &dev->button_trigger;
+			break;
+
+	case SET_TRIGGER_BE:
+			start_frame[MTYPE_IDX] = SET_TRIGGER_BE;
+			len = 0;
+			data_ptr = NULL;
+			break;
+
+	case GET_WATTING_TIME_OFF:
+			start_frame[MTYPE_IDX] = GET_WATTING_TIME_OFF;
+			len = 4;
+			data_ptr = (u8*) &dev->watting_time_off;
+			break;
+
+	case SET_PREP_MODE:
+			u8 buf[2];
+			memset(buf, 0, sizeof(buf));
+			memcpy(buf, &frame[12], 2);
+			start_frame[MTYPE_IDX] = SET_PREP_MODE;
+			len = 0;
+			if (buf[0] == 1 && buf[1] == 5) {
+				responses(dev, start_frame, NULL, len, end);
+				HAL_NVIC_SystemReset();
+			}
+			break;
+
 	case WRITE_FW_DATA:
-		u64 flag;
+		boot_options_t flag;;
 		start_frame[MTYPE_IDX] = WRITE_FW_DATA;
+		static u32 fw_len;
 		len = 1;
 		if (!length) {
-			flag = ON_BOOTING_APP;
-			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, (u8 *) &flag, sizeof(u64));
+#ifdef FLASH_LARGE
+			flag = UPDATE_MODE;
+			flash_write_data((VAR_BASE_ADDRESS + FW_LENGTH_OFFSET), (u8 *)&fw_len, sizeof(u32));
+			flash_write_data((VAR_BASE_ADDRESS + FLAG_OFFSET), (u8 *)&flag, sizeof(boot_options_t));
 			res = 1;
 			responses(dev, start_frame, &res, len, end);
 			HAL_NVIC_SystemReset();
+#else
+			flag = BOOTING_MODE;
+			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, &flag, sizeof(boot_options_t));
+			res = 1;
+			responses(dev, start_frame, &res, len, end);
+			HAL_NVIC_SystemReset();
+#endif
 		} else if (flash_write_firmware(dev->firmware_address, &frame[START_DATA_IDX],
 				length) != HAL_OK) {
 			res = 0;
 		} else {
 			dev->firmware_address += length;
+			fw_len += length;
 			res = 1;
 		}
 		data_ptr = &res;

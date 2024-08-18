@@ -130,14 +130,14 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 		data_ptr = (u8*) &dev->watting_time_off;
 		break;
 	case SET_PREP_MODE:
-		u64 flag = ON_UPDATE_FIRMWARE;
+		boot_options_t flag = BOOTLOADER_MODE;
 		u8 buf[2];
 		memset(buf, 0, sizeof(buf));
 		memcpy(buf, &frame[12], 2);
 		start_frame[MTYPE_IDX] = SET_PREP_MODE;
 		len = 0;
 		if (buf[0] == 1 && buf[1] == 5) {
-			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, (u8*) &flag, sizeof(u64));
+			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, (u8*) &flag, sizeof(boot_options_t));
 			responses(dev, start_frame, NULL, len, end);
 			HAL_NVIC_SystemReset();
 		}
