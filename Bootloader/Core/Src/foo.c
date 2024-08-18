@@ -145,7 +145,7 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 			break;
 
 	case WRITE_FW_DATA:
-		boot_options_t flag;;
+		boot_options_t flag;
 		start_frame[MTYPE_IDX] = WRITE_FW_DATA;
 		static u32 fw_len;
 		len = 1;
