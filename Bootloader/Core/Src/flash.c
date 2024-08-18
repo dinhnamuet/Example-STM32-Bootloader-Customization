@@ -85,8 +85,8 @@ HAL_StatusTypeDef flash_write_data(u32 base_address, u8 *data, u32 length) {
 }
 
 void flash_read(u32 address, void *desc, u32 length) {
-	u64 *res = (u64 *)desc;
-	for (int i = 0; i < length / 8; i++) {
-		res[i] = *(volatile u64*) (address + (8 * i));
+	u8 *ptr = (u8 *)desc;
+	for (int i = 0; i < length; i++) {
+		ptr[i] = *(volatile u8*) (address + i);
 	}
 }
