@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "flash.h"
 #include "bootloader.h"
+#include "CRC.h"
 
 #define START_IDX 0
 #define PRVER_IDX 1
@@ -39,6 +40,14 @@ void get_serial_number(struct foo_device *dev) {
  */
 static HAL_StatusTypeDef flash_write_firmware(u32 address, const u8 *data, u32 len) {
 	u8 *verify = NULL;
+	u32 crc_value = 0;
+
+	memcpy(&crc_value, &data[len - 4], sizeof(u32)); /* Get CRC at the end of data */
+	len -= 4;
+
+	if (CRC_CalculateCRC32(data, len) != crc_value) {
+		return HAL_ERROR; /* CRC is incorrect */
+	}
 
 	HAL_StatusTypeDef  res = flash_write_data(address, (u8 *)data, len); /* Write Firmware data */
 	if (res != HAL_OK) {
@@ -149,6 +158,13 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 		start_frame[MTYPE_IDX] = WRITE_FW_DATA;
 		static u32 fw_len;
 		len = 1;
+#ifdef FLASH_LARGE
+		flash_read(VAR_BASE_ADDRESS + FLAG_OFFSET, &flag, sizeof(boot_options_t));
+		if (length && flag != BOOTING_MODE) {
+			flag = BOOTING_MODE;
+			flash_write_data(VAR_BASE_ADDRESS + FLAG_OFFSET, &flag, sizeof(boot_options_t)); /* If update firmware process fault, Bootloader boot old firmware */
+		}
+#endif
 		if (!length) {
 #ifdef FLASH_LARGE
 			flag = UPDATE_MODE;
@@ -164,8 +180,7 @@ error_t handle_request(struct foo_device *dev, const u8 *frame) {
 			responses(dev, start_frame, &res, len, end);
 			HAL_NVIC_SystemReset();
 #endif
-		} else if (flash_write_firmware(dev->firmware_address, &frame[START_DATA_IDX],
-				length) != HAL_OK) {
+		} else if (flash_write_firmware(dev->firmware_address, &frame[START_DATA_IDX], length) != HAL_OK) {
 			res = 0;
 		} else {
 			dev->firmware_address += length;
